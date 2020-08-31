@@ -27,6 +27,7 @@ use QuickBooksOnline\API\Core\HttpClients\RequestParameters;
 use QuickBooksOnline\API\Core\Http\Serialization\JsonObjectSerializer;
 use QuickBooksOnline\API\Core\Http\Serialization\SerializationFormat;
 use QuickBooksOnline\API\Data\IPPAttachable;
+use QuickBooksOnline\API\Data\IPPEntitlementsResponse;
 use QuickBooksOnline\API\Data\IPPIntuitEntity;
 use QuickBooksOnline\API\Data\IPPTaxService;
 use QuickBooksOnline\API\Data\IPPid;
@@ -264,6 +265,23 @@ class DataService
         $restHandler = $this->restHandler;
         $loggerUsedByRestHandler = $restHandler->getRequestLogger();
         $loggerUsedByRestHandler->setLogDirectory($new_log_location);
+        return $this;
+    }
+
+    /**
+     * Set logging for OAuth calls
+     *
+     * @param Boolean $enableLogs          Turns on logging for OAuthCalls
+     *
+     * @param Boolean $debugMode           Turns on debug mode to log tokens
+     *
+     * @param String $new_log_location     The directory path for storing request and response log
+     *
+     * @return $this
+     */
+    public function setLogForOAuthCalls($enableLogs, $debugMode, $new_log_location)
+    {
+        $this->OAuth2LoginHelper->setLogForOAuthCalls($enableLogs, $debugMode, $new_log_location);
         return $this;
     }
 
@@ -889,7 +907,7 @@ class DataService
         $dataMultipart .= "Content-Disposition: form-data; name=\"file_content_{$desiredIdentifier}\"; filename=\"{$fileName}\"" . $newline;
         $dataMultipart .= "Content-Type: {$mimeType}" . $newline;
         $dataMultipart .= 'Content-Transfer-Encoding: base64' . $newline . $newline;
-        $dataMultipart .= chunk_split(base64_encode($imgBits)) . $newline;
+        $dataMultipart .= chunk_split($imgBits) . $newline;
         $dataMultipart .= "--" . $boundaryString . "--" . $newline . $newline; // finish with two eol's!!
 
         return $this->sendRequestParseResponseBodyAndHandleHttpError(null, $uri, $dataMultipart, DataService::UPLOAD, $boundaryString);
@@ -1175,6 +1193,57 @@ class DataService
         }
     }
 
+    public function recurringTransaction($query)
+    {
+        $this->serviceContext->IppConfiguration->Logger->RequestLog->Log(TraceLevel::Info, "Called Method Query.");
+
+        if ('QBO' == $this->serviceContext->serviceType) {
+            $httpsContentType = CoreConstants::CONTENTTYPE_APPLICATIONTEXT;
+        } else {
+            $httpsContentType = CoreConstants::CONTENTTYPE_TEXTPLAIN;
+        }
+
+        $httpsUri = implode(CoreConstants::SLASH_CHAR, array('company', $this->serviceContext->realmId, 'query'));
+        $httpsPostBody = $this->appendPaginationInfo($query, $startPosition, $maxResults);
+
+        $requestParameters = $this->getPostRequestParameters($httpsUri, $httpsContentType);
+        $restRequestHandler = $this->getRestHandler();
+        list($responseCode, $responseBody) = $restRequestHandler->sendRequest($requestParameters, $httpsPostBody, null, $this->isThrownExceptionOnError());
+        $faultHandler = $restRequestHandler->getFaultHandler();
+        if ($faultHandler) {
+            $this->lastError = $faultHandler;
+            return null;
+        } else {
+            $this->lastError = false;
+            $returnValue = new IntuitRecurringTransactionResponse();
+            try {
+                $xmlObj = simplexml_load_string($responseBody);
+                $responseArray = $xmlObj->QueryResponse->RecurringTransaction;
+                if(sizeof($responseArray) <= 0){
+                    throw new ServiceException("No recurring transactions found.");
+                }
+
+                for($i = 0; $i < sizeof($responseArray); $i++){
+                    $currentResponse = $responseArray[$i];
+                    $currentEntityName = $entityList[$i];
+                    $entities = $this->responseSerializer->Deserialize($currentResponse->asXML(), false);
+                    $entityName = $currentEntityName;
+                    //If we find the actual name, update it.
+                    foreach ($currentResponse->children() as $currentResponseChild) {
+                        $entityName = (string)$currentResponseChild->getName();
+                        break;
+                    }
+                    $returnValue->entities[$entityName][] = $entities;
+                }
+            } catch (\Exception $e) {
+                IdsExceptionManager::HandleException($e);
+            }
+
+            $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Executing Recurring Transaction.");
+            return $returnValue;
+        }
+    }
+
 
     /**
      * Returns an entity under the specified realm. The realm must be set in the context.
@@ -1453,6 +1522,17 @@ class DataService
         return $writer->isHandler() ? $writer->getHandler() : $writer->getTempPath();
     }
 
+    protected function processRecurringTransactionResponse($recurringTransaction) {
+        //Return an array of objects
+        $entities = [];
+        foreach ($recurringTransaction as $oneResponse) {
+            $oneEntity =  $this->responseSerializer->Deserialize('<RestResponse>'.$oneResponse->children()->asXML().'</RestResponse>');
+            $entities = array_merge($entities, $oneEntity);
+        }
+
+        return $entities;
+    }
+
     /**
      * Returns true or false if writer object is allowed as return result
      * @return boolean
@@ -1691,12 +1771,39 @@ class DataService
     }
 
     /**
+     * Get the Entitlement Response
+     * @return \SimpleXMLElement Xml
+     */
+    public function getEntitlementsResponse()
+    {
+        $currentServiceContext = $this->getServiceContext();
+        if (!isset($currentServiceContext) || empty($currentServiceContext->realmId)) {
+           throw new SdkException("Please Setup Service Context before making get entitlements response call.");
+        }
+        //The Preferences URL
+        $uri = $this->getServiceContext()->IppConfiguration->BaseUrl->Qbo;
+        $requestParameters = new RequestParameters($uri, 'GET', CoreConstants::CONTENTTYPE_APPLICATIONXML, null);
+        $restRequestHandler = $this->getRestHandler();
+        $entitlementsUri = $this->getServiceContext()->IppConfiguration->BaseUrl->Qbo . "manage/entitlements/v3/" . $this->serviceContext->realmId;
+        list($responseCode, $responseBody) = $restRequestHandler->sendRequest($requestParameters, null, $entitlementsUri, $this->isThrownExceptionOnError());
+        $faultHandler = $restRequestHandler->getFaultHandler();
+        //$faultHandler now is true or false
+        if ($faultHandler) {
+            $this->lastError = $faultHandler;
+            return null;
+        } else {
+            $this->lastError = false;
+            return simplexml_load_string($responseBody);
+        }
+    }
+
+    /**
      * Get the actual ID string value of either an IPPid object, or an Id string
      * @param Object $id
      * @return String Id
      */
     private function getIDString($id){
-        if($id instanceof IPPid || $id instanceof QuickBooksOnline\API\Data\IPPid){
+        if($id instanceof IPPid){
             return (String)$id->value;
         }else{
             return (String)$id;
