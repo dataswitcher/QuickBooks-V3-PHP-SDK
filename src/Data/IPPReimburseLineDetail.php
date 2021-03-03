@@ -3,16 +3,17 @@ namespace QuickBooksOnline\API\Data;
 
 /**
  * @xmlNamespace http://schema.intuit.com/finance/v3
- * @xmlType string
- * @xmlName IPPEntityStatusEnum
- * @var IPPEntityStatusEnum
+ * @xmlType ItemLineDetail
+ * @xmlName IPPReimburseLineDetail
+ * @var IPPReimburseLineDetail
  * @xmlDefinition 
 				Product: ALL
-				Description: Possible Status of an Entity.
+				Description: Reimburse Charge Line Detail
+				for a transaction line.
 			
  */
-class IPPEntityStatusEnum
-	{
+class IPPReimburseLineDetail
+	extends IPPItemLineDetail	{
 
 		/**                                                                       
 		* Initializes this object, optionally with pre-defined property values    
@@ -27,7 +28,7 @@ class IPPEntityStatusEnum
 		{
 			foreach($keyValInitializers as $initPropName => $initPropVal)
 			{
-				if (property_exists('IPPEntityStatusEnum',$initPropName) || property_exists('QuickBooksOnline\API\Data\IPPEntityStatusEnum',$initPropName))
+				if (property_exists('IPPReimburseLineDetail',$initPropName) || property_exists('QuickBooksOnline\API\Data\IPPReimburseLineDetail',$initPropName))
 				{
 					$this->{$initPropName} = $initPropVal;
 				}
@@ -39,10 +40,6 @@ class IPPEntityStatusEnum
 			}
 		}
 
-		/**
-		 * @xmlType value
-		 * @var string
-		 */
-		public $value;
 
-} // end class IPPEntityStatusEnum
+
+} // end class IPPReimburseLineDetail
