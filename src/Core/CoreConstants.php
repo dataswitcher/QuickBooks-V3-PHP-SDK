@@ -37,6 +37,11 @@ class CoreConstants
     const CLIENT_CURL = 'curl';
 
     /**
+     * The http client name for curl multi
+     */
+    const CLIENT_CURL_MULTI = 'curl_multi';
+
+    /**
      * The standard name for guzzle.
      */
     const CLIENT_GUZZLE = 'guzzle';

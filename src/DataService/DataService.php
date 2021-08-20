@@ -19,6 +19,8 @@ namespace QuickBooksOnline\API\DataService;
 use QuickBooksOnline\API\Core\CoreHelper;
 use QuickBooksOnline\API\Core\Http\Serialization\IEntitySerializer;
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
+use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
+use QuickBooksOnline\API\Core\HttpClients\CurlMultiHttpClient;
 use QuickBooksOnline\API\Core\HttpClients\FaultHandler;
 use QuickBooksOnline\API\Core\HttpClients\RestHandler;
 use QuickBooksOnline\API\Core\ServiceContext;
@@ -107,6 +109,11 @@ class DataService
      * @var SyncRestHandler
      */
     private $restHandler;
+
+    /**
+     * @var AsyncRestHandler
+     */
+    private $asyncRestHandler;
 
     /**
      * Serializer needs to be used fore responce object
@@ -213,12 +220,17 @@ class DataService
      */
     protected function setupRestHandler($serviceContext)
     {
-       if(isset($serviceContext)){
-          $client = ClientFactory::createClient($this->getClientName());
-          $this->restHandler = new SyncRestHandler($serviceContext, $client);
-       }else{
-          throw new SdkException("Can not set the Rest Client based on null ServiceContext.");
+       if (!isset($serviceContext)) {
+           throw new SdkException("Can not set the Rest Client based on null ServiceContext.");
        }
+
+       if ($this->clientName === CoreConstants::CLIENT_CURL_MULTI) {
+           $this->asyncRestHandler = new AsyncRestHandler($serviceContext, new CurlMultiHttpClient());
+       } else {
+           $client = ClientFactory::createClient($this->getClientName());
+           $this->restHandler = new SyncRestHandler($serviceContext, $client);
+       }
+
        return $this;
     }
 
@@ -802,13 +814,13 @@ class DataService
         $this->verifyOperationAccess($entity, __FUNCTION__);
         if ($this->isJsonOnly($entity)) {
             $this->forceJsonSerializers();
-        } 
+        }
 
         $httpsPostBody = $this->executeObjectSerializer($entity, $urlResource);
         // Builds resource Uri
         $resourceURI = implode(CoreConstants::SLASH_CHAR, array('company', $this->serviceContext->realmId, $urlResource));
 
-        $uri = $this->handleTaxService($entity, $resourceURI);        
+        $uri = $this->handleTaxService($entity, $resourceURI);
         // Send request
         return $this->sendRequestParseResponseBodyAndHandleHttpError($entity, $uri, $httpsPostBody, DataService::ADD);
     }
@@ -948,7 +960,7 @@ class DataService
             return $responseBody;
         } else {
             $this->lastError = false;
-            
+
             return $this->processDownloadedContent(new ContentWriter($responseBody), $responseCode, $dir, $this->getExportFileNameForPDF($entity, "pdf"));
         }
     }
@@ -1008,7 +1020,7 @@ class DataService
 
         $httpsUri = implode(CoreConstants::SLASH_CHAR, array('company', $this->serviceContext->realmId, 'query'));
         $httpsPostBody = $this->appendPaginationInfo($query, $startPosition, $maxResults);
-        
+
         if(!is_null($includes)) {
             $httpsUri .= "?include=$includes";
         }
@@ -1820,6 +1832,17 @@ class DataService
         return $batch;
     }
 
+    /**
+     * Creates new multi batch
+     *
+     * @return MultiBatch
+     */
+    public function CreateNewMultiBatch()
+    {
+        $this->setClientName(CoreConstants::CLIENT_CURL_MULTI);
+
+        return new MultiBatch($this->serviceContext, $this->asyncRestHandler);
+    }
 
     /**
      * Parse input date-time string into unix timestamp
