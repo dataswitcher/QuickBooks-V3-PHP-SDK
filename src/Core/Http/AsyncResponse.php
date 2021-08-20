@@ -2,36 +2,42 @@
 
 namespace QuickBooksOnline\API\Core\Http;
 
+use QuickBooksOnline\API\Core\HttpClients\IntuitResponse;
+
 class AsyncResponse
 {
+    /** @var string */
     private $id;
-    private $statusCode;
-    private $body;
+
+    /** @var IntuitResponse */
+    private $intuitResponse;
+    /** @var string */
+    private $uri;
 
     /**
      * @param string $id
-     * @param int $statusCode
-     * @param string $body
+     * @param string $uri
+     * @param IntuitResponse $intuitResponse
      */
-    public function __construct($id, $statusCode, $body)
+    public function __construct($id, $uri, IntuitResponse $intuitResponse)
     {
         $this->id = $id;
-        $this->statusCode = $statusCode;
-        $this->body = $body;
+        $this->uri = $uri;
+        $this->intuitResponse = $intuitResponse;
     }
 
-    public function id()
+    public function getId()
     {
         return $this->id;
     }
 
-    public function statusCode()
+    public function getUri()
     {
-        return $this->statusCode;
+        return $this->uri;
     }
 
-    public function body()
+    public function getIntuitResponse()
     {
-        return $this->body;
+        return $this->intuitResponse;
     }
 }

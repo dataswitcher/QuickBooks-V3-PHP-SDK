@@ -83,10 +83,16 @@ class AsyncRestHandler extends SyncRestHandler
      */
     public function triggerScheduledRequests()
     {
-        $result = $this->curlMultiClient->process($this->scheduledRequests);
+        $results = $this->curlMultiClient->process($this->scheduledRequests);
 
         $this->scheduledRequests = [];
 
-        return $result;
+        foreach ($results as $result) {
+            $intuitResponse = $result->getIntuitResponse();
+
+            $this->LogAPIResponseToLog($intuitResponse->getBody(), $result->getUri(), $intuitResponse->getHeaders());
+        }
+
+        return $results;
     }
 }
