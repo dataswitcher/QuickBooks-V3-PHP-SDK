@@ -17,20 +17,18 @@
 namespace QuickBooksOnline\API\DataService;
 
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
+use QuickBooksOnline\API\DataService\Traits\BatchTrait;
 use QuickBooksOnline\API\Exception\IdsExceptionManager;
 use QuickBooksOnline\API\Exception\IdsException;
-use QuickBooksOnline\API\Exception\IdsError;
 use QuickBooksOnline\API\Exception\ValidationException;
 use QuickBooksOnline\API\Exception\ServiceException;
 use QuickBooksOnline\API\Exception\SecurityException;
 use QuickBooksOnline\API\Core\CoreHelper;
-use QuickBooksOnline\API\Core\ServiceContext;
 use QuickBooksOnline\API\Core\HttpClients\FaultHandler;
 use QuickBooksOnline\API\Core\HttpClients\RestHandler;
 use QuickBooksOnline\API\Data\IPPBatchItemRequest;
 use QuickBooksOnline\API\Data\IPPIntuitBatchRequest;
 use QuickBooksOnline\API\Core\CoreConstants;
-use QuickBooksOnline\API\Core\HttpClients\SyncRestHandler as RestServiceSyncRestHandler;
 use QuickBooksOnline\API\Diagnostics\TraceLevel;
 use QuickBooksOnline\API\Core\HttpClients\RequestParameters;
 use QuickBooksOnline\API\Utility\UtilityConstants;
@@ -41,6 +39,7 @@ use \QuickBooksOnline\API\Core\Http\Serialization\IEntitySerializer;
  */
 class Batch
 {
+    use BatchTrait;
 
     /**
      * batch requests
@@ -60,12 +59,6 @@ class Batch
      * @var array batchResponses
      */
     public $intuitBatchItemResponses;
-
-    /**
-     * service context object.
-     * @var ServiceContext serviceContext
-     */
-    private $serviceContext;
 
     /**
      * rest handler object.
@@ -307,50 +300,8 @@ class Batch
           // Get literal XML representation of IntuitBatchRequest into a DOMDocument
           $httpsPostBodyPreProcessed = XmlObjectSerializer::getPostXmlFromArbitraryEntity($intuitBatchRequest, $urlResource);
 
-          $doc = new \DOMDocument();
-          $domObj = $doc->loadXML($httpsPostBodyPreProcessed);
-          $xpath = new \DOMXPath($doc);
+          $httpsPostBody = $this->buildXmlBody($httpsPostBodyPreProcessed, $intuitBatchRequest);
 
-          // Replace generically-named IntuitObject nodes with tags that describe contained objects
-          $objectIndex = 0;
-          while (1) {
-              $matchingElementArray = $xpath->query("//IntuitObject");
-              if (is_null($matchingElementArray)) {
-                  break;
-              }
-
-              if ($objectIndex>=count($intuitBatchRequest->BatchItemRequest)) {
-                  break;
-              }
-
-              foreach ($matchingElementArray as $oneNode) {
-
-                  // Found a DOMNode currently named "IntuitObject".  Need to rename to
-                  // entity that describes it's contents, like "ns0:Customer" (determine correct
-                  // name by inspecting IntuitObject's class).
-                  if ($intuitBatchRequest->BatchItemRequest[$objectIndex]->IntuitObject) {
-                      // Determine entity name to use
-                      $entityClassName = get_class($intuitBatchRequest->BatchItemRequest[$objectIndex]->IntuitObject);
-                      $entityTransferName = XmlObjectSerializer::cleanPhpClassNameToIntuitEntityName($entityClassName);
-                      $entityTransferName = 'ns0:'.$entityTransferName;
-
-                      // Replace old-named DOMNode with new-named DOMNode
-                      $newNode = $oneNode->ownerDocument->createElement($entityTransferName);
-                      if ($oneNode->attributes->length) {
-                          foreach ($oneNode->attributes as $attribute) {
-                              $newNode->setAttribute($attribute->nodeName, $attribute->nodeValue);
-                          }
-                      }
-                      while ($oneNode->firstChild) {
-                          $newNode->appendChild($oneNode->firstChild);
-                      }
-                      $oneNode->parentNode->replaceChild($newNode, $oneNode);
-                  }
-                  break;
-              }
-              $objectIndex++;
-          }
-          $httpsPostBody = $doc->saveXML();
           list($responseCode, $responseBody) = $restRequestHandler->sendRequest($requestParameters, $httpsPostBody, null, $this->isThrowExceptionOnError);
           $faultHandler = $restRequestHandler->getFaultHandler();
           if ($faultHandler) {
