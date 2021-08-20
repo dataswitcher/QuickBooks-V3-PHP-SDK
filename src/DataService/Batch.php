@@ -57,18 +57,6 @@ class Batch
     public $intuitBatchItemResponses;
 
     /**
-     * rest handler object.
-     * @var RestHandler restHandler
-     */
-    private $restHandler;
-
-    /**
-     * serializer to be used.
-     * @var IEntitySerializer responseSerializer
-     */
-    private $responseSerializer;
-
-    /**
     * If not false, the request from last dataService did not return 2xx
     * @var FaultHandler
     */

@@ -3,7 +3,9 @@
 namespace QuickBooksOnline\API\DataService;
 
 use QuickBooksOnline\API\Core\CoreConstants;
+use QuickBooksOnline\API\Core\CoreHelper;
 use QuickBooksOnline\API\Core\Http\AsyncRequest;
+use QuickBooksOnline\API\Core\Http\AsyncResponse;
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
 use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
 use QuickBooksOnline\API\Core\HttpClients\RequestParameters;
@@ -17,20 +19,18 @@ class MultiBatch
 {
     use BatchTrait;
 
-    /** @var AsyncRestHandler */
-    private $asyncRestHandler;
-
     /** @var IPPBatchItemRequest[] */
     private $multiBatches = [];
 
     /**
      * @param ServiceContext $serviceContext
-     * @param AsyncRestHandler $asyncRestHandler
+     * @param AsyncRestHandler $restHandler
      */
-    public function __construct(ServiceContext $serviceContext, AsyncRestHandler $asyncRestHandler)
+    public function __construct(ServiceContext $serviceContext, AsyncRestHandler $restHandler)
     {
         $this->serviceContext = $serviceContext;
-        $this->asyncRestHandler = $asyncRestHandler;
+        $this->restHandler = $restHandler;
+        $this->responseSerializer = CoreHelper::GetSerializer($this->serviceContext, false);
     }
 
     /**
@@ -67,25 +67,43 @@ class MultiBatch
 
             $httpsPostBody = $this->buildXmlBody($postBodyPreProcessed, $intuitBatchRequest);
 
-            $this->asyncRestHandler->scheduleAsyncRequest((string) $batchId, $requestParameters, $httpsPostBody, null);
+            $this->restHandler->scheduleAsyncRequest((string) $batchId, $requestParameters, $httpsPostBody, null);
         }
 
-        $results = $this->asyncRestHandler->triggerScheduledRequests();
+        $results = $this->restHandler->triggerScheduledRequests();
 
+        return $this->buildResponse($results);
+    }
+
+    /**
+     * @param array $results
+     *
+     * @return array
+     */
+    private function buildResponse(array $results)
+    {
+        $response = [];
+
+        /** @var AsyncResponse $result */
         foreach ($results as $result) {
+            $batchId = $result->getId();
             $body = $result->getIntuitResponse()->getBody();
 
             try {
-                $oneXmlObj = simplexml_load_string($body);
+                $responseXmlObj = simplexml_load_string($body);
 
-                $intuitBatchItemResponse = $this->ProcessBatchItemResponse($oneXmlObj);
-                // $this->intuitBatchItemResponses[$intuitBatchItemResponse->batchItemId] = $intuitBatchItemResponse;
+                foreach ($responseXmlObj as $oneXmlObj) {
+                    $intuitBatchItemResponse = $this->ProcessBatchItemResponse($oneXmlObj);
+                    $response[$batchId][$intuitBatchItemResponse->batchItemId] = $intuitBatchItemResponse;
+                }
             } catch (\Exception $e) {
-                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$result->getId()}: " . $e->getMessage());
+                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$batchId}: " . $e->getMessage());
                 $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Stack Trace: " . $e->getTraceAsString());
             }
 
-            $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$result->getId()}");
+            $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$batchId}");
         }
+
+        return $response;
     }
 }

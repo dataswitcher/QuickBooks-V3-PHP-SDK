@@ -2,7 +2,10 @@
 
 namespace QuickBooksOnline\API\DataService\Traits;
 
+use QuickBooksOnline\API\Core\Http\Serialization\IEntitySerializer;
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
+use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
+use QuickBooksOnline\API\Core\HttpClients\RestHandler;
 use QuickBooksOnline\API\Core\ServiceContext;
 use QuickBooksOnline\API\DataService\IntuitBatchResponse;
 use QuickBooksOnline\API\Exception\IdsException;
@@ -24,6 +27,18 @@ trait BatchTrait
      * @var boolean
      */
     protected $debugMode = false;
+
+    /**
+     * rest handler object.
+     * @var RestHandler|AsyncRestHandler
+     */
+    protected $restHandler;
+
+    /**
+     * serializer to be used.
+     * @var IEntitySerializer responseSerializer
+     */
+    protected $responseSerializer;
 
     /**
      * Set the debug mode
