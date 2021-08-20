@@ -11,6 +11,7 @@ use QuickBooksOnline\API\Core\ServiceContext;
 use QuickBooksOnline\API\Data\IPPBatchItemRequest;
 use QuickBooksOnline\API\Data\IPPIntuitBatchRequest;
 use QuickBooksOnline\API\DataService\Traits\BatchTrait;
+use QuickBooksOnline\API\Diagnostics\TraceLevel;
 
 class MultiBatch
 {
@@ -69,6 +70,22 @@ class MultiBatch
             $this->asyncRestHandler->scheduleAsyncRequest((string) $batchId, $requestParameters, $httpsPostBody, null);
         }
 
-        return $this->asyncRestHandler->triggerScheduledRequests();
+        $results = $this->asyncRestHandler->triggerScheduledRequests();
+
+        foreach ($results as $result) {
+            $body = $result->getIntuitResponse()->getBody();
+
+            try {
+                $oneXmlObj = simplexml_load_string($body);
+
+                $intuitBatchItemResponse = $this->ProcessBatchItemResponse($oneXmlObj);
+                // $this->intuitBatchItemResponses[$intuitBatchItemResponse->batchItemId] = $intuitBatchItemResponse;
+            } catch (\Exception $e) {
+                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$result->getId()}: " . $e->getMessage());
+                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Stack Trace: " . $e->getTraceAsString());
+            }
+
+            $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$result->getId()}");
+        }
     }
 }
