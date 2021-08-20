@@ -19,9 +19,6 @@ class AsyncRequest
     /** @var string */
     private $body;
 
-    /** @var null|string */
-    private $response;
-
     /** @var int */
     private $timeout;
 
@@ -96,14 +93,6 @@ class AsyncRequest
     }
 
     /**
-     * @return string|null
-     */
-    public function getResponse()
-    {
-        return $this->response;
-    }
-
-    /**
      * @return int
      */
     public function getTimeout()
@@ -117,13 +106,5 @@ class AsyncRequest
     public function verifySsl()
     {
         return $this->verifySsl;
-    }
-
-    /**
-     * @param string $response
-     */
-    public function setResponse($response)
-    {
-        $this->response = $response;
     }
 }

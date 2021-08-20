@@ -2,6 +2,7 @@
 
 namespace QuickBooksOnline\API\Core\HttpClients\Traits;
 
+use QuickBooksOnline\API\Core\CoreConstants;
 use QuickBooksOnline\API\Exception\SdkException;
 
 trait CurlHttpTrait
@@ -50,6 +51,21 @@ trait CurlHttpTrait
         $this->setSSL($curl_opt, $verifySSL);
 
         return $curl_opt;
+    }
+
+    /**
+     * Set the SSL certifcate path and corresponding varaibles for cURL
+     */
+    protected function setSSL(&$curl_opt, $verifySSL){
+        $curl_opt[CURLOPT_SSL_VERIFYPEER] = true;
+        if($verifySSL){
+            $curl_opt[CURLOPT_SSL_VERIFYHOST] = 2;
+            //based on spec, if TLS 1.2 is supported, it will use the TLS 1.2 or latest version by default
+            //$curl_opt[CURLOPT_SSLVERSION] = 6;
+            $curl_opt[CURLOPT_CAINFO] = CoreConstants::getCertPath(); //Pem certification Key Path
+        } else {
+            $curl_opt[CURLOPT_SSL_VERIFYHOST] = 0;
+        }
     }
 
     /**

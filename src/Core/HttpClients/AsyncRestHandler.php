@@ -4,6 +4,7 @@ namespace QuickBooksOnline\API\Core\HttpClients;
 
 use QuickBooksOnline\API\Core\CoreConstants;
 use QuickBooksOnline\API\Core\Http\AsyncRequest;
+use QuickBooksOnline\API\Core\Http\AsyncResponse;
 use QuickBooksOnline\API\Core\ServiceContext;
 use QuickBooksOnline\API\Exception\SdkException;
 
@@ -77,8 +78,15 @@ class AsyncRestHandler extends SyncRestHandler
         $this->scheduledRequests[] = $request;
     }
 
-    public function triggerAsyncRequests()
+    /**
+     * @return AsyncResponse[]
+     */
+    public function triggerScheduledRequests()
     {
-        $this->curlMultiClient->process($this->scheduledRequests);
+        $result = $this->curlMultiClient->process($this->scheduledRequests);
+
+        $this->scheduledRequests = [];
+
+        return $result;
     }
 }

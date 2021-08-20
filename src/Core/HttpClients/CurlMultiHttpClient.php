@@ -3,26 +3,29 @@
 namespace QuickBooksOnline\API\Core\HttpClients;
 
 use QuickBooksOnline\API\Core\Http\AsyncRequest;
+use QuickBooksOnline\API\Core\Http\AsyncResponse;
 use QuickBooksOnline\API\Core\HttpClients\Traits\CurlHttpTrait;
 
 class CurlMultiHttpClient
 {
     use CurlHttpTrait;
 
-    /** @var resource[] */
-    private $curlHandlers = [];
-
     /**
      * @param AsyncRequest[] $asyncRequests
+     *
+     * @return AsyncResponse[]
      */
     public function process(array $asyncRequests)
     {
+        $curlHandlers = [];
+        $responses = [];
+
         $mh = curl_multi_init();
 
         foreach ($asyncRequests as $request) {
             $curlHandler = curl_init($request->getUrl());
 
-            $this->curlHandlers[$request->getId()] = $curlHandler;
+            $curlHandlers[$request->getId()] = $curlHandler;
 
             curl_setopt_array(
                 $curlHandler,
@@ -47,14 +50,20 @@ class CurlMultiHttpClient
         } while ($running && $status === CURLM_OK);
 
         foreach ($asyncRequests as $request) {
-            $handler = $this->curlHandlers[$request->getId()];
+            $handler = $curlHandlers[$request->getId()];
 
-            $request->setResponse((string) curl_multi_getcontent($handler));
+            $responses[] = new AsyncResponse(
+                $request->getId(),
+                (int) curl_getinfo($handler, CURLINFO_RESPONSE_CODE),
+                (string) curl_multi_getcontent($handler)
+            );
 
             curl_multi_remove_handle($mh, $handler);
             curl_close($handler);
         }
 
         curl_multi_close($mh);
+
+        return $responses;
     }
 }

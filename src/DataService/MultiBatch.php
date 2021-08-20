@@ -2,8 +2,8 @@
 
 namespace QuickBooksOnline\API\DataService;
 
-use Exception;
 use QuickBooksOnline\API\Core\CoreConstants;
+use QuickBooksOnline\API\Core\Http\AsyncRequest;
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
 use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
 use QuickBooksOnline\API\Core\HttpClients\RequestParameters;
@@ -45,6 +45,8 @@ class MultiBatch
     }
 
     /**
+     * @return AsyncRequest[]
+     *
      * @throws \QuickBooksOnline\API\Exception\SdkException
      */
     public function process()
@@ -67,6 +69,6 @@ class MultiBatch
             $this->asyncRestHandler->scheduleAsyncRequest((string) $batchId, $requestParameters, $httpsPostBody, null);
         }
 
-        $this->asyncRestHandler->triggerAsyncRequests();
+        return $this->asyncRestHandler->triggerScheduledRequests();
     }
 }

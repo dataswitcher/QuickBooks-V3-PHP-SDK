@@ -3,6 +3,7 @@
 namespace QuickBooksOnline\API\DataService;
 
 use QuickBooksOnline\API\Data\IPPBatchItemRequest;
+use QuickBooksOnline\API\Data\IPPIntuitEntity;
 use QuickBooksOnline\API\Exception\IdsException;
 use QuickBooksOnline\API\Exception\IdsExceptionManager;
 
@@ -26,14 +27,14 @@ class MultiBatchItems
     }
 
     /**
-     * @param IEntity $item            Entity for the batch operation.
+     * @param IPPIntuitEntity $item            Entity for the batch operation.
      * @param string $id               Unique batch item id
-     * @param OperationEnum $operation Operation to be performed for the entity.
+     * @param string $operation Operation to be performed for the entity.
      * @param string $optionsData      To send with this specific batch item (example - allowduplicatedocnumber for invoices)
      *
      * @throws IdsException
      */
-    public function AddItem($item, $id, $operation, $optionsData = null)
+    public function addItem($item, $id, $operation, $optionsData = null)
     {
         if (!$item) {
             IdsExceptionManager::HandleException(new IdsException('StringParameterNullOrEmpty: entity'));
