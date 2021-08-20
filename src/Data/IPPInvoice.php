@@ -250,6 +250,18 @@ class IPPInvoice
 	/**
 	 * @Definition 
 								Product: QBO
+								Description: QBO:  Message displayed to customer about payment Instructions. eg: bank account info.
+							
+	 * @xmlType element
+	 * @xmlNamespace http://schema.intuit.com/finance/v3
+	 * @xmlMinOccurs 0
+	 * @xmlName PaymentDetailsMessage
+	 * @var string
+	 */
+	public $PaymentDetailsMessage;
+	/**
+	 * @Definition 
+								Product: QBO
 								Description: Internal use only: Convenience Fee detail for the invoice
 							
 	 * @xmlType element
@@ -259,6 +271,54 @@ class IPPInvoice
 	 * @var com\intuit\schema\finance\v3\IPPConvenienceFeeDetail
 	 */
 	public $ConvenienceFeeDetail;
+	/**
+	 * @Definition 
+								Product: All
+								Description: QBO:  Security code associated with Sharable link of the invoice for external users
+							
+	 * @xmlType element
+	 * @xmlNamespace http://schema.intuit.com/finance/v3
+	 * @xmlMinOccurs 0
+	 * @xmlName InvoiceLinkSecurityCode
+	 * @var string
+	 */
+	public $InvoiceLinkSecurityCode;
+	/**
+	 * @Definition 
+								Product: All
+								Description: QBO:  Expiry date for Sharable link of the invoice for external users
+							
+	 * @xmlType element
+	 * @xmlNamespace http://schema.intuit.com/finance/v3
+	 * @xmlMinOccurs 0
+	 * @xmlName InvoiceLinkExpiryDate
+	 * @var string
+	 */
+	public $InvoiceLinkExpiryDate;
+	/**
+	 * @Definition 
+								Product: QBO
+								Description: Indicates whether the Recurring Invoice eligible for auto payment.
+							
+	 * @xmlType element
+	 * @xmlNamespace http://schema.intuit.com/finance/v3
+	 * @xmlMinOccurs 0
+	 * @xmlName AutoPayEligible
+	 * @var boolean
+	 */
+	public $AutoPayEligible;
+	/**
+	 * @Definition 
+								Product: QBO
+								Description: Indicates whether the Non-Recurring Invoice eligible for scheduled payment.
+							
+	 * @xmlType element
+	 * @xmlNamespace http://schema.intuit.com/finance/v3
+	 * @xmlMinOccurs 0
+	 * @xmlName SchedulePayEligible
+	 * @var boolean
+	 */
+	public $SchedulePayEligible;
 
 
 } // end class IPPInvoice
