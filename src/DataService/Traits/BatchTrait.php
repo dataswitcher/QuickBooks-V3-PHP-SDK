@@ -8,6 +8,7 @@ use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
 use QuickBooksOnline\API\Core\HttpClients\RestHandler;
 use QuickBooksOnline\API\Core\ServiceContext;
 use QuickBooksOnline\API\DataService\IntuitBatchResponse;
+use QuickBooksOnline\API\DataService\MultiBatch;
 use QuickBooksOnline\API\Exception\IdsException;
 use QuickBooksOnline\API\Exception\SecurityException;
 use QuickBooksOnline\API\Exception\ServiceException;
@@ -144,14 +145,29 @@ trait BatchTrait
             case "Fault":
                 $result->responseType = UtilityConstants::Exception;
                 $idsException = $this->IterateFaultAndPrepareException($firstChild);
-                if($this->debugMode) {
-                    $interface = $this->restHandler->getHttpClientInterface();
-                    $responseInterface = $interface->getLastResponse();
-                    $debugInfo = [
-                        'intuit_tid' => $responseInterface->getIntuitTid(),
-                        'body' => $responseInterface->getBody(),
-                        'headers' => $responseInterface->getHeaders(),
-                    ];
+                if ($this->debugMode) {
+                    if ($this instanceof MultiBatch) {
+                        $debugInfo = [];
+
+                        foreach ($this->asyncResponse as $response) {
+                            $intuitResponse = $response->getIntuitResponse();
+
+                            $debugInfo[] = [
+                                'intuit_tid' => $intuitResponse->getIntuitTid(),
+                                'body' => $intuitResponse->getBody(),
+                                'headers' => $intuitResponse->getHeaders(),
+                            ];
+                        }
+                    } else {
+                        $interface = $this->restHandler->getHttpClientInterface();
+                        $responseInterface = $interface->getLastResponse();
+                        $debugInfo = [
+                            'intuit_tid' => $responseInterface->getIntuitTid(),
+                            'body' => $responseInterface->getBody(),
+                            'headers' => $responseInterface->getHeaders(),
+                        ];
+                    }
+
                     $idsException->setDebug($debugInfo);
                 }
                 $result->exception = $idsException;

@@ -11,6 +11,7 @@ class AsyncResponse
 
     /** @var IntuitResponse */
     private $intuitResponse;
+
     /** @var string */
     private $uri;
 

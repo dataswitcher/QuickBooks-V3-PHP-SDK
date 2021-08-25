@@ -4,7 +4,6 @@ namespace QuickBooksOnline\API\DataService;
 
 use QuickBooksOnline\API\Core\CoreConstants;
 use QuickBooksOnline\API\Core\CoreHelper;
-use QuickBooksOnline\API\Core\Http\AsyncRequest;
 use QuickBooksOnline\API\Core\Http\AsyncResponse;
 use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
 use QuickBooksOnline\API\Core\HttpClients\AsyncRestHandler;
@@ -21,6 +20,9 @@ class MultiBatch
 
     /** @var IPPBatchItemRequest[] */
     private $multiBatches = [];
+
+    /** @var AsyncResponse[] */
+    private $asyncResponse = [];
 
     /**
      * @param ServiceContext $serviceContext
@@ -46,7 +48,7 @@ class MultiBatch
     }
 
     /**
-     * @return AsyncRequest[]
+     * @return IntuitBatchResponse[][]
      *
      * @throws \QuickBooksOnline\API\Exception\SdkException
      */
@@ -78,10 +80,11 @@ class MultiBatch
     /**
      * @param array $results
      *
-     * @return array
+     * @return IntuitBatchResponse[][]
      */
     private function buildResponse(array $results)
     {
+        $this->asyncResponse = $results;
         $response = [];
 
         /** @var AsyncResponse $result */
@@ -93,8 +96,7 @@ class MultiBatch
                 $responseXmlObj = simplexml_load_string($body);
 
                 foreach ($responseXmlObj as $oneXmlObj) {
-                    $intuitBatchItemResponse = $this->ProcessBatchItemResponse($oneXmlObj);
-                    $response[$batchId][$intuitBatchItemResponse->batchItemId] = $intuitBatchItemResponse;
+                    $response[$batchId][] = $this->ProcessBatchItemResponse($oneXmlObj);
                 }
             } catch (\Exception $e) {
                 $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$batchId}: " . $e->getMessage());
