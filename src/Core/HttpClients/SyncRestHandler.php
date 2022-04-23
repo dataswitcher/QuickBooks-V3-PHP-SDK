@@ -36,13 +36,13 @@ class SyncRestHandler extends RestHandler
     * The serviceContext of this request
     * @var ServiceContext
     */
-    private $context = null;
+    protected $context = null;
 
    /**
     * The Http Client that is used to make QuickBooks Online API call
     * @var HttpClientInterface
     */
-    private $httpClientInterface;
+    protected $httpClientInterface;
 
    /**
     * Initializes a new instance of the SyncRestHandler class.
@@ -144,8 +144,7 @@ class SyncRestHandler extends RestHandler
      * @return Response and HTTP Status code
      */
     private function OAuth1APICall($baseURL, $queryParameters, $HttpMethod, $requestUri, $requestParameters, $requestBody, $throwExceptionOnError){
-      $AuthorizationHeader = $this->getOAuth1AuthorizationHeader($baseURL, $queryParameters, $HttpMethod);
-      $httpHeaders = $this->setCommonHeadersForPHPSDK($AuthorizationHeader, $requestUri, $requestParameters->ContentType, $requestBody);
+      $httpHeaders = $this->buildOAuth1Headers($baseURL, $queryParameters, $HttpMethod, $requestUri, $requestParameters, $requestBody);
       // Log Request Body to a file
       $this->LogAPIRequestToLog($requestBody, $requestUri, $httpHeaders);
       $intuitResponse = $this->httpClientInterface->makeAPICall($requestUri, $HttpMethod, $httpHeaders, $requestBody, null, false);
@@ -200,17 +199,9 @@ class SyncRestHandler extends RestHandler
      * @return array|null Response and HTTP Status code
      */
     private function OAuth2APICall($baseURL, $queryParameters, $HttpMethod, $requestUri, $requestParameters, $requestBody, $throwExceptionOnError){
-        $AuthorizationHeader = $this->getOAuth2AuthorizationHeader($this->context->requestValidator);
-        //We only support QBO for PHP SDK. No QBD support, change
-        // from: if ('QBO'==$this->context->serviceType || 'QBD'==$this->context->serviceType)
-        if (CoreConstants::IntuitServicesTypeQBO ==$this->context->serviceType) {
-            // IDS call
-            $httpHeaders = $this->setCommonHeadersForPHPSDK($AuthorizationHeader, $requestUri, $requestParameters->ContentType, $requestBody);
-            // Log Request Body to a file
-            $this->LogAPIRequestToLog($requestBody, $requestUri, $httpHeaders);
-        } else {
-             throw new SdkException("IPP or other Call is not supported in OAuth2 Mode.");
-        }
+        $httpHeaders = $this->buildOAuth2Headers($requestUri, $requestParameters, $requestBody);
+
+        $this->LogAPIRequestToLog($requestBody, $requestUri, $httpHeaders);
 
         $intuitResponse = $this->httpClientInterface->makeAPICall($requestUri, $HttpMethod, $httpHeaders,  $requestBody, null, false);
         $faultHandler = $intuitResponse->getFaultHandler();
@@ -321,7 +312,7 @@ class SyncRestHandler extends RestHandler
     /**
      * This step is required since the configuration settings might have been changed.
      */
-    private function resetCompressorAndSerializer(){
+    protected function resetCompressorAndSerializer(){
       $this->RequestCompressor = CoreHelper::GetCompressor($this->context, true);
       $this->ResponseCompressor = CoreHelper::GetCompressor($this->context, false);
       $this->RequestSerializer = CoreHelper::GetSerializer($this->context, true);
@@ -335,7 +326,7 @@ class SyncRestHandler extends RestHandler
      * @param  String           $specifiedRequestUri  Ignore the rule, use the user specified URI for the request
      * @return String           Destination URL for the request
      */
-    private function getDestinationURL($requestParameters, $oMode, $specifiedRequestUri){
+    protected function getDestinationURL($requestParameters, $oMode, $specifiedRequestUri){
       // For Platform Discconect/Reconenct call, only for OAuth 1
       if (isset($requestParameters->ApiName)) {
           if(strcasecmp($oMode, CoreConstants::OAUTH1) == 0)
@@ -363,7 +354,7 @@ class SyncRestHandler extends RestHandler
      * @param String requestUri
      * @return String requestUri with Minor Version Appended
      */
-    private function appendMinorVersionToRequestURI($requestUri){
+    protected function appendMinorVersionToRequestURI($requestUri){
       $setMinorVersion = $this->context->minorVersion;
       if (isset($setMinorVersion)) {
           if ($this->queryToArray($requestUri) == false) { //if no query string params
@@ -381,7 +372,7 @@ class SyncRestHandler extends RestHandler
      * @param RequestParameters  RequestParameters  The requestParameters for the request
      * @return String HTTP Method
      */
-    private function checkHTTPMethod($requestParameters){
+    protected function checkHTTPMethod($requestParameters){
       $verb = $requestParameters->HttpVerbType;
       if(strcasecmp($verb, CoreConstants::HTTP_POST) == 0){
          return CoreConstants::HTTP_POST;
@@ -398,7 +389,7 @@ class SyncRestHandler extends RestHandler
      * @param String  $url  The complete URL for the request
      * @return String       The baseURL.
      */
-    private function getBaseURL($url){
+    protected function getBaseURL($url){
       return strtok($url, '?');
     }
 
@@ -408,7 +399,7 @@ class SyncRestHandler extends RestHandler
      * @param String  $url  The $url for the request
      * @return Array  a list of query paramters.
      */
-    private function parseURL($url){
+    protected function parseURL($url){
        $query_str = parse_url($url, PHP_URL_QUERY);
        parse_str($query_str, $parameters);
        return $parameters;
@@ -548,5 +539,43 @@ class SyncRestHandler extends RestHandler
 
         // Return the response.
         return $response;
+    }
+
+    /**
+     * @param string $baseURL
+     * @param array $queryParameters
+     * @param string $HttpMethod
+     * @param string $requestUri
+     * @param RequestParameters $requestParameters
+     * @param string $requestBody
+     *
+     * @return array
+     */
+    protected function buildOAuth1Headers($baseURL, $queryParameters, $HttpMethod, $requestUri, $requestParameters, $requestBody)
+    {
+        $AuthorizationHeader = $this->getOAuth1AuthorizationHeader($baseURL, $queryParameters, $HttpMethod);
+
+        return $this->setCommonHeadersForPHPSDK($AuthorizationHeader, $requestUri, $requestParameters->ContentType, $requestBody);
+    }
+
+    /**
+     * @param string $requestUri
+     * @param RequestParameters $requestParameters
+     * @param string $requestBody
+     *
+     * @return array
+     *
+     * @throws SdkException
+     */
+    protected function buildOAuth2Headers($requestUri, $requestParameters, $requestBody)
+    {
+        $AuthorizationHeader = $this->getOAuth2AuthorizationHeader($this->context->requestValidator);
+
+        // We only support QBO for PHP SDK. No QBD support
+        if (CoreConstants::IntuitServicesTypeQBO != $this->context->serviceType) {
+            throw new SdkException('IPP or other Call is not supported in OAuth2 Mode.');
+        }
+
+        return $this->setCommonHeadersForPHPSDK($AuthorizationHeader, $requestUri, $requestParameters->ContentType, $requestBody);
     }
 }
