@@ -24,6 +24,9 @@ class MultiBatch
     /** @var AsyncResponse[] */
     private $asyncResponse = [];
 
+    /** @var callable */
+    private $accessTokenCallback;
+
     /**
      * @param ServiceContext $serviceContext
      * @param AsyncRestHandler $restHandler
@@ -45,6 +48,14 @@ class MultiBatch
         $this->multiBatches[$multiBatch->getId()] = $multiBatch->getItems();
 
         return $this;
+    }
+
+    /**
+     * @param callable $callback
+     */
+    public function setAccessTokenCallback(callable $callback)
+    {
+        $this->accessTokenCallback = $callback;
     }
 
     /**
@@ -72,7 +83,7 @@ class MultiBatch
             $this->restHandler->scheduleAsyncRequest((string) $batchId, $requestParameters, $httpsPostBody, null);
         }
 
-        $results = $this->restHandler->triggerScheduledRequests();
+        $results = $this->restHandler->triggerScheduledRequests($this->accessTokenCallback);
 
         return $this->buildResponse($results);
     }

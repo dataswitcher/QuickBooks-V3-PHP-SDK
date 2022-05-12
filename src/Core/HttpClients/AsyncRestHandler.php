@@ -81,9 +81,9 @@ class AsyncRestHandler extends SyncRestHandler
     /**
      * @return AsyncResponse[]
      */
-    public function triggerScheduledRequests()
+    public function triggerScheduledRequests($tokenCallback)
     {
-        $results = $this->curlMultiClient->process($this->scheduledRequests);
+        $results = $this->curlMultiClient->process($this->scheduledRequests, $tokenCallback);
 
         $this->scheduledRequests = [];
 
