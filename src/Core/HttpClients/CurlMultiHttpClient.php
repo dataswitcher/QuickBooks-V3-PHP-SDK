@@ -17,7 +17,7 @@ class CurlMultiHttpClient
      * @return AsyncResponse[]
      * @throws SdkException
      */
-    public function process(array $asyncRequests)
+    public function process(array $asyncRequests, callable $callback)
     {
         $curlHandlers = [];
         $responses = [];
@@ -28,13 +28,18 @@ class CurlMultiHttpClient
             $curlHandler = curl_init($request->getUrl());
 
             $curlHandlers[$request->getId()] = $curlHandler;
+            $headers = $request->getHeaders();
+
+            // overwrite the auth header with the callback value
+            $token = $callback();
+            $headers['Authorization'] = 'Bearer ' . $token;
 
             curl_setopt_array(
                 $curlHandler,
                 $this->buildOptions(
                     $request->getUrl(),
                     $request->getMethod(),
-                    $request->getHeaders(),
+                    $headers,
                     $request->getBody(),
                     $request->getTimeout(),
                     $request->verifySsl()
