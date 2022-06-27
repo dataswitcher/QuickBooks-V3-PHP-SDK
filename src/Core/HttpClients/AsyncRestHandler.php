@@ -88,9 +88,10 @@ class AsyncRestHandler extends SyncRestHandler
         $this->scheduledRequests = [];
 
         foreach ($results as $result) {
-            $intuitResponse = $result->getIntuitResponse();
-
-            $this->LogAPIResponseToLog($intuitResponse->getBody(), $result->getUri(), $intuitResponse->getHeaders());
+            if (method_exists($result, 'getIntuitResponse')) {
+                $intuitResponse = $result->getIntuitResponse();
+                $this->LogAPIResponseToLog($intuitResponse->getBody(), $result->getUri(), $intuitResponse->getHeaders());
+            }
         }
 
         return $results;

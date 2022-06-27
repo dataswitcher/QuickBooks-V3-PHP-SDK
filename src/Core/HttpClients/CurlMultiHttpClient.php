@@ -4,6 +4,7 @@ namespace QuickBooksOnline\API\Core\HttpClients;
 
 use QuickBooksOnline\API\Core\Http\AsyncRequest;
 use QuickBooksOnline\API\Core\Http\AsyncResponse;
+use QuickBooksOnline\API\Core\Http\ThrottledResponse;
 use QuickBooksOnline\API\Core\HttpClients\Traits\CurlHttpTrait;
 use QuickBooksOnline\API\Exception\SdkException;
 
@@ -58,8 +59,14 @@ class CurlMultiHttpClient
 
         foreach ($asyncRequests as $request) {
             $handler = $curlHandlers[$request->getId()];
+            
+            $statusCode = curl_getinfo($handler, CURLINFO_RESPONSE_CODE);
 
-            $responses[] = $this->buildResponse($request->getId(), $handler);
+            if($statusCode === 429) {
+                $responses[] = new ThrottledResponse($request->getId());
+            } else {
+                $responses[] = $this->buildResponse($request->getId(), $handler);
+            }
 
             curl_multi_remove_handle($mh, $handler);
             curl_close($handler);
