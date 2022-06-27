@@ -116,6 +116,9 @@ class MultiBatch
                 }
 
                 $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$batchId}");
+            } else if (method_exists($result, 'getBatchId')) {
+                // throttled response
+                $response[$result->getBatchId()][] = $result;
             }
         }
 
