@@ -100,21 +100,23 @@ class MultiBatch
 
         /** @var AsyncResponse $result */
         foreach ($results as $result) {
-            $batchId = $result->getId();
-            $body = $result->getIntuitResponse()->getBody();
+            if (method_exists($result, 'getId')) {
+                $batchId = $result->getId();
+                $body = $result->getIntuitResponse()->getBody();
 
-            try {
-                $responseXmlObj = simplexml_load_string($body);
+                try {
+                    $responseXmlObj = simplexml_load_string($body);
 
-                foreach ($responseXmlObj as $oneXmlObj) {
-                    $response[$batchId][] = $this->ProcessBatchItemResponse($oneXmlObj);
+                    foreach ($responseXmlObj as $oneXmlObj) {
+                        $response[$batchId][] = $this->ProcessBatchItemResponse($oneXmlObj);
+                    }
+                } catch (\Exception $e) {
+                    $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$batchId}: " . $e->getMessage());
+                    $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Stack Trace: " . $e->getTraceAsString());
                 }
-            } catch (\Exception $e) {
-                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Encountered an error while parsing batch {$batchId}: " . $e->getMessage());
-                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Error, "Stack Trace: " . $e->getTraceAsString());
-            }
 
-            $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$batchId}");
+                $this->serviceContext->IppConfiguration->Logger->CustomLogger->Log(TraceLevel::Info, "Finished Execute method for batch {$batchId}");
+            }
         }
 
         return $response;
