@@ -59,7 +59,7 @@ class CurlMultiHttpClient
 
         foreach ($asyncRequests as $request) {
             $handler = $curlHandlers[$request->getId()];
-            
+
             $statusCode = curl_getinfo($handler, CURLINFO_RESPONSE_CODE);
 
             if($statusCode === 429) {
