@@ -4,15 +4,15 @@ namespace QuickBooksOnline\API\Data;
 /**
  * @xmlNamespace http://schema.intuit.com/finance/v3
  * @xmlType string
- * @xmlName IPPAccountSubTypeEnum
- * @var IPPAccountSubTypeEnum
+ * @xmlName IPPPaymentExtendedTypeEnum
+ * @var IPPPaymentExtendedTypeEnum
  * @xmlDefinition 
-						Product: QBO
-						Description: Use Rent a room relief - Relief Claimed for relief claimed for rented room for landlords
-					
- * @xmlb Share Application Money Pending Allotment
+				Product: ALL
+				Description: Enumeration of extended
+				payment types.
+			
  */
-class IPPAccountSubTypeEnum
+class IPPPaymentExtendedTypeEnum
 	{
 
 		/**                                                                       
@@ -28,7 +28,7 @@ class IPPAccountSubTypeEnum
 		{
 			foreach($keyValInitializers as $initPropName => $initPropVal)
 			{
-				if (property_exists('IPPAccountSubTypeEnum',$initPropName) || property_exists('QuickBooksOnline\API\Data\IPPAccountSubTypeEnum',$initPropName))
+				if (property_exists('IPPPaymentExtendedTypeEnum',$initPropName) || property_exists('QuickBooksOnline\API\Data\IPPPaymentExtendedTypeEnum',$initPropName))
 				{
 					$this->{$initPropName} = $initPropVal;
 				}
@@ -46,4 +46,4 @@ class IPPAccountSubTypeEnum
 		 */
 		public $value;
 
-} // end class IPPAccountSubTypeEnum
+} // end class IPPPaymentExtendedTypeEnum
